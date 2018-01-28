@@ -50,7 +50,9 @@ int main(int argc, char** argv)
    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-   window = glfwCreateWindow(720, 360, "SDF", nullptr, nullptr);
+   const int screen_w = 1280;
+   const int screen_h = 720;
+   window = glfwCreateWindow(screen_w, screen_h, "SDF", nullptr, nullptr);
 
    if (!window)
    {
@@ -89,11 +91,12 @@ int main(int argc, char** argv)
 
    GLint elapsed_time_uniform = glGetUniformLocation(program, "iTime");
    GLint resolution_uniform = glGetUniformLocation(program, "iResolution");
+   GLint mouse_uniform = glGetUniformLocation(program, "iMouse");
    ticker system_ticker;
 
    GLfloat res[2];
-   res[0] = 720.0;
-   res[1] = 360.0;
+   res[0] = screen_w;
+   res[1] = screen_h;
    while (!glfwWindowShouldClose(window))
    {
       system_ticker.tick();
@@ -105,6 +108,11 @@ int main(int argc, char** argv)
       res[0] = width;
       res[1] = height;
       glUniform2fv(resolution_uniform, 1, res);
+      double mx, my;
+      glfwGetCursorPos(window, &mx, &my);
+      float mouse_pos[2] = { float(mx), float(my) };
+      glUniform2fv(mouse_uniform, 1, mouse_pos);
+
       glViewport(0, 0, width, height);
       glClear(GL_COLOR_BUFFER_BIT);
 

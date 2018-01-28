@@ -4,6 +4,7 @@ out vec4 outColor;
 
 uniform float iTime;
 uniform vec2 iResolution;
+uniform vec2 iMouse;
 
 #define STEPS 255
 #define STEP_SIZE 0.0001
@@ -44,7 +45,7 @@ float raymarchHit(vec3 position, vec3 direction)
 	float depth = 0;
    for (int i = 0; i < STEPS; ++i)
    {
-      float dist = boxHit(position + direction * depth, vec3(0.5, 0.0, -1.1));
+      float dist = boxHit(position + direction * depth, vec3(0.10, 0.10, 0.10));
       //float dist = sphereHit(position + direction * depth, vec3(0.0, 0.0, -1.0), 0.55);
       if (dist < STEP_SIZE)
       {
@@ -63,10 +64,25 @@ float raymarchHit(vec3 position, vec3 direction)
 void main()
 {
    camera cam;
-   cam.origin = vec3(0, 0, 0);
-   cam.left_corner = vec3(-2.0, -1.0, -1.0);
-   cam.horizontal = vec3(4.0, 0.0, 0.0);
-   cam.vertical = vec3(0.0, 2.0, 0.0);
+   float fov = radians(60.0); // vertical field of view
+
+   float half_height = tan(fov/2.0);
+   float half_width = (16.0/9.0)*half_height;
+
+   float mx = 2.0 * ((iMouse.x / iResolution.x) - half_width);
+   float my = 2.0 * ((iMouse.y / iResolution.y) - half_height);
+
+   // set up the orthonormal basis
+   vec3 look = vec3(mx, my, -1);
+   vec3 vup = vec3(0, 1, 0);
+   cam.origin = vec3(0.0, 0.0, 0.3);
+   vec3 w = normalize(-look);
+   vec3 v = normalize(vup - dot(vup, w) * w);
+   vec3 u = cross(v, w);
+   cam.left_corner = vec3(half_width, half_height, -1.0);
+   cam.left_corner = cam.origin - half_width*u - half_height*v - w;
+   cam.horizontal = 2.0*half_width*u;
+   cam.vertical = 2.0*half_height*v;
 
    vec2 uv = gl_FragCoord.xy / iResolution;
    ray r = get_ray(cam, uv);
