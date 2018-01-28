@@ -40,13 +40,19 @@ float boxHit(vec3 p, vec3 b)
    return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
 }
 
+float sceneSDF(vec3 p)
+{
+   //return sphereHit(p, vec3(0.0, 0.0, -1.0), 0.55)
+   float dist = boxHit(p, vec3(0.10, 0.10, 0.10));
+   return dist;
+}
+
 float raymarchHit(vec3 position, vec3 direction)
 {
 	float depth = 0;
    for (int i = 0; i < STEPS; ++i)
    {
-      float dist = boxHit(position + direction * depth, vec3(0.10, 0.10, 0.10));
-      //float dist = sphereHit(position + direction * depth, vec3(0.0, 0.0, -1.0), 0.55);
+      float dist = sceneSDF(position + direction * depth);
       if (dist < STEP_SIZE)
       {
 			return depth;
@@ -61,6 +67,17 @@ float raymarchHit(vec3 position, vec3 direction)
    return -1.0;
 }
 
+/**
+ * Using the gradient of the SDF, estimate the normal on the surface at point p.
+ */
+vec3 estimateNormal(vec3 p) {
+    return normalize(vec3(
+        sceneSDF(vec3(p.x + STEP_SIZE, p.y, p.z)) - sceneSDF(vec3(p.x - STEP_SIZE, p.y, p.z)),
+        sceneSDF(vec3(p.x, p.y + STEP_SIZE, p.z)) - sceneSDF(vec3(p.x, p.y - STEP_SIZE, p.z)),
+        sceneSDF(vec3(p.x, p.y, p.z  + STEP_SIZE)) - sceneSDF(vec3(p.x, p.y, p.z - STEP_SIZE))
+    ));
+}
+
 void main()
 {
    camera cam;
@@ -72,13 +89,16 @@ void main()
    float mx = 2.0 * ((iMouse.x / iResolution.x) - half_width);
    float my = 2.0 * ((iMouse.y / iResolution.y) - half_height);
 
-   // set up the orthonormal basis
-   vec3 look = vec3(mx, my, -1);
+   vec3 look = vec3(0, 0, 0);
    vec3 vup = vec3(0, 1, 0);
-   cam.origin = vec3(0.0, 0.0, 0.3);
-   vec3 w = normalize(-look);
+   cam.origin = vec3(-0.25, 0.25, 0.35);
+
+   // set up the orthonormal basis
+   vec3 w = normalize(cam.origin - look);
    vec3 v = normalize(vup - dot(vup, w) * w);
    vec3 u = cross(v, w);
+
+   // final camera vectors
    cam.left_corner = vec3(half_width, half_height, -1.0);
    cam.left_corner = cam.origin - half_width*u - half_height*v - w;
    cam.horizontal = 2.0*half_width*u;
@@ -90,9 +110,8 @@ void main()
    float dist = raymarchHit(r.origin, r.direction);
    if (dist > 0.0)
    {
-      //vec3 n = normalize((r.origin + r.direction * dist) - vec3(0.0, 0.0, -1.0));
-      //outColor = 0.5 * vec4(n.x + 1.0, n.y + 1.0, n.z + 1.0, 1.0);
-      outColor = vec4(1.0, 0.0, 0.0, 1.0);
+      vec3 n = estimateNormal(r.origin + r.direction * dist);
+      outColor = abs(vec4(n.x, n.y, n.z, 1.0));
    }
    else
    {
