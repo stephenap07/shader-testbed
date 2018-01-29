@@ -42,8 +42,11 @@ float boxHit(vec3 p, vec3 b)
 
 float sceneSDF(vec3 p)
 {
-   float dist = sphereHit(p, vec3(0.0, 0.0, -1.0), 0.55);
-   //float dist = boxHit(p, vec3(0.1, 0.1, 0.1));
+   float dist = min(
+      sphereHit(p, vec3(0.0, sin(iTime), -0.30), 0.45),
+      boxHit(p, vec3(0.1, 0.2, 0.1))
+   );
+
    return dist;
 }
 
@@ -87,9 +90,9 @@ void main()
    float mx = 2.0 * ((iMouse.x / iResolution.x) - half_width);
    float my = 2.0 * ((iMouse.y / iResolution.y) - half_height);
 
-   vec3 look = vec3(0.0, 0.0, -1.0);
+   vec3 look = vec3(3.0*mx, 3.0*my, -1.0);
    vec3 vup = vec3(0, 1, 0);
-   cam.origin = vec3(-0.2, 0.20, 0.25);
+   cam.origin = vec3(-0.2, 0.30, 0.55);
 
    // set up the orthonormal basis
    vec3 w = normalize(cam.origin - look);
@@ -109,15 +112,16 @@ void main()
    if (dist > -1.0)
    {
       vec3 Kd = vec3(0.1, 0.3, 0.8);
-	  vec3 Ks = 20.0 * vec3(1.0, 1.0, 1.0);
-      float m = 2.0;
-	  vec3 l = normalize(vec3(0.3, 0.3, 0.3) - look); // assuming look represents object for now
-	  vec3 p = r.origin + r.direction * dist;
-      vec3 v = normalize(p - r.origin);
+      vec3 Ks = vec3(1.0, 1.0, 1.0);
+      float m = 10.0;
+      vec3 lightPos = vec3(sin(iTime * 2.0), 0.3, -cos(iTime * 2.0));
+      vec3 l = normalize(lightPos - look); // assuming look represents object for now
+      vec3 p = r.origin + r.direction * dist;
+      vec3 v = normalize(r.origin - p);
       vec3 n = estimateNormal(p);
-	  vec3 h = normalize(v + r.origin);
+      vec3 h = normalize(v + lightPos);
       float cosTh = clamp(dot(n, h), 0.0, 1.0);
-      float cosTi = clamp(dot(n, l), 0.0, 1.0);
+      float cosTi = clamp(dot(l, n), 0.0, 1.0);
       outColor =  vec4(cosTi * (Kd + pow(cosTh, m) * Ks) * vec3(1.0, 1.0, 1.0), 1.0);
    }
    else
