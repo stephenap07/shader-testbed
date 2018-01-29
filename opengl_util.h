@@ -5,7 +5,7 @@
 
 #include <cctype>
 
-// Compile shder from a file. Return 0 on error.
+// Compile shader from a file. Return 0 on error.
 GLuint compile_shader(GLenum shader_type, const GLchar* shaderSource, GLint len)
 {
    GLuint shader = glCreateShader(shader_type);
@@ -15,14 +15,15 @@ GLuint compile_shader(GLenum shader_type, const GLchar* shaderSource, GLint len)
    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
    if (success == GL_FALSE)
    {
-      GLint logSize = 0;
-      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logSize);
-      if (logSize)
+      GLint lsize = 0;
+      glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &lsize);
+      if (lsize)
       {
-         GLchar* errorLog = new GLchar[logSize];
-         glGetShaderInfoLog(shader, logSize, &logSize, errorLog);
+         GLchar* errorLog = new GLchar[lsize];
+         glGetShaderInfoLog(shader, lsize, &lsize, errorLog);
          fprintf(stderr, "Error with shader %s\n", errorLog);
          delete[] errorLog;
+         return 0;
       }
    }
    return shader;
@@ -31,25 +32,29 @@ GLuint compile_shader(GLenum shader_type, const GLchar* shaderSource, GLint len)
 // Compile shader from a file. Return 0 on error.
 GLuint compile_shader_from_file(GLenum shader_type, const char* filename)
 {
-   FILE* fp = fopen(filename, "r");
+   FILE* fp = fopen(filename, "rb");
    if (!fp)
    {
       fprintf(stderr, "Failed to load shader file %s\n", filename);
       return 0;
    }
-   size_t file_size = 0;
    fseek(fp, 0, SEEK_END);
-   file_size = ftell(fp);
-   fseek(fp, 0, SEEK_SET);
-   if (file_size == 0)
+   const size_t file_size = ftell(fp);
+   rewind(fp);
+   if (!file_size)
    {
       fclose(fp);
       fprintf(stderr, "File is empty %s\n", filename);
    }
-   char* contents = new char[file_size];
-   fread(contents, 1, file_size, fp);
-   GLuint shader = compile_shader(shader_type, contents, GLint(file_size));
+   char* buffer = new char[file_size + 1];
+   fread(buffer, file_size, 1, fp);
+   buffer[file_size] = '\0';
+   GLuint shader = compile_shader(shader_type, buffer, GLint(file_size));
+   if (!shader)
+   {
+      fprintf(stderr, "Failed to load shader %s\n", filename);
+   }
    fclose(fp);
-   delete[] contents;
+   delete[] buffer;
    return shader;
 }

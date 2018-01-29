@@ -37,7 +37,7 @@ static const GLfloat vertices[] = {
 };
 // clang-format on
 
-int main(int argc, char** argv)
+int main()
 {
    GLFWwindow* window;
    glfwSetErrorCallback(error_callback);

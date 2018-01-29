@@ -1,3 +1,4 @@
 sdf
 *.o
 *.sw[A-z]
+/shader-testbed
