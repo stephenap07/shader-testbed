@@ -42,8 +42,8 @@ float boxHit(vec3 p, vec3 b)
 
 float sceneSDF(vec3 p)
 {
-   //return sphereHit(p, vec3(0.0, 0.0, -1.0), 0.55)
-   float dist = boxHit(p, vec3(0.10, 0.10, 0.10));
+   //float dist = sphereHit(p, vec3(0.0, 0.0, -1.0), 0.55);
+   float dist = boxHit(p, vec3(0.1, 0.1, 0.1));
    return dist;
 }
 
@@ -67,9 +67,7 @@ float raymarchHit(vec3 position, vec3 direction)
    return -1.0;
 }
 
-/**
- * Using the gradient of the SDF, estimate the normal on the surface at point p.
- */
+// Using the gradient of the SDF, estimate the normal on the surface at point p.
 vec3 estimateNormal(vec3 p) {
     return normalize(vec3(
         sceneSDF(vec3(p.x + STEP_SIZE, p.y, p.z)) - sceneSDF(vec3(p.x - STEP_SIZE, p.y, p.z)),
@@ -89,9 +87,9 @@ void main()
    float mx = 2.0 * ((iMouse.x / iResolution.x) - half_width);
    float my = 2.0 * ((iMouse.y / iResolution.y) - half_height);
 
-   vec3 look = vec3(0, 0, 0);
+   vec3 look = vec3(0.0, 0.0, 0.0);
    vec3 vup = vec3(0, 1, 0);
-   cam.origin = vec3(-0.25, 0.25, 0.35);
+   cam.origin = vec3(-0.2, 0.20, 0.25);
 
    // set up the orthonormal basis
    vec3 w = normalize(cam.origin - look);
@@ -104,8 +102,7 @@ void main()
    cam.horizontal = 2.0*half_width*u;
    cam.vertical = 2.0*half_height*v;
 
-   vec2 uv = gl_FragCoord.xy / iResolution;
-   ray r = get_ray(cam, uv);
+   ray r = get_ray(cam, gl_FragCoord.xy / iResolution);
 
    float dist = raymarchHit(r.origin, r.direction);
    if (dist > 0.0)
