@@ -7,7 +7,7 @@ uniform vec2 iResolution;
 uniform vec2 iMouse;
 
 #define STEPS 255
-#define STEP_SIZE 0.0001
+#define EPSILON 0.0001
 #define MAX_DIST 100.0
 
 struct camera
@@ -42,8 +42,8 @@ float boxHit(vec3 p, vec3 b)
 
 float sceneSDF(vec3 p)
 {
-   //float dist = sphereHit(p, vec3(0.0, 0.0, -1.0), 0.55);
-   float dist = boxHit(p, vec3(0.1, 0.1, 0.1));
+   float dist = sphereHit(p, vec3(0.0, 0.0, -1.0), 0.55);
+   //float dist = boxHit(p, vec3(0.1, 0.1, 0.1));
    return dist;
 }
 
@@ -53,15 +53,15 @@ float raymarchHit(vec3 position, vec3 direction)
    for (int i = 0; i < STEPS; ++i)
    {
       float dist = sceneSDF(position + direction * depth);
-      if (dist < STEP_SIZE)
+      if (dist < EPSILON)
       {
 			return depth;
       }
-		depth += dist;
+      depth += dist;
       if (depth >= MAX_DIST)
-		{
-			return -1.0;
-		}
+      {
+         return -1.0;
+      }
    }
 
    return -1.0;
@@ -70,9 +70,9 @@ float raymarchHit(vec3 position, vec3 direction)
 // Using the gradient of the SDF, estimate the normal on the surface at point p.
 vec3 estimateNormal(vec3 p) {
     return normalize(vec3(
-        sceneSDF(vec3(p.x + STEP_SIZE, p.y, p.z)) - sceneSDF(vec3(p.x - STEP_SIZE, p.y, p.z)),
-        sceneSDF(vec3(p.x, p.y + STEP_SIZE, p.z)) - sceneSDF(vec3(p.x, p.y - STEP_SIZE, p.z)),
-        sceneSDF(vec3(p.x, p.y, p.z  + STEP_SIZE)) - sceneSDF(vec3(p.x, p.y, p.z - STEP_SIZE))
+        sceneSDF(vec3(p.x + EPSILON, p.y, p.z)) - sceneSDF(vec3(p.x - EPSILON, p.y, p.z)),
+        sceneSDF(vec3(p.x, p.y + EPSILON, p.z)) - sceneSDF(vec3(p.x, p.y - EPSILON, p.z)),
+        sceneSDF(vec3(p.x, p.y, p.z  + EPSILON)) - sceneSDF(vec3(p.x, p.y, p.z - EPSILON))
     ));
 }
 
@@ -87,7 +87,7 @@ void main()
    float mx = 2.0 * ((iMouse.x / iResolution.x) - half_width);
    float my = 2.0 * ((iMouse.y / iResolution.y) - half_height);
 
-   vec3 look = vec3(0.0, 0.0, 0.0);
+   vec3 look = vec3(0.0, 0.0, -1.0);
    vec3 vup = vec3(0, 1, 0);
    cam.origin = vec3(-0.2, 0.20, 0.25);
 
@@ -105,10 +105,20 @@ void main()
    ray r = get_ray(cam, gl_FragCoord.xy / iResolution);
 
    float dist = raymarchHit(r.origin, r.direction);
-   if (dist > 0.0)
+
+   if (dist > -1.0)
    {
-      vec3 n = estimateNormal(r.origin + r.direction * dist);
-      outColor = abs(vec4(n.x, n.y, n.z, 1.0));
+      vec3 Kd = vec3(0.1, 0.3, 0.8);
+	  vec3 Ks = 20.0 * vec3(1.0, 1.0, 1.0);
+      float m = 2.0;
+	  vec3 l = normalize(vec3(0.3, 0.3, 0.3) - look); // assuming look represents object for now
+	  vec3 p = r.origin + r.direction * dist;
+      vec3 v = normalize(p - r.origin);
+      vec3 n = estimateNormal(p);
+	  vec3 h = normalize(v + r.origin);
+      float cosTh = clamp(dot(n, h), 0.0, 1.0);
+      float cosTi = clamp(dot(n, l), 0.0, 1.0);
+      outColor =  vec4(cosTi * (Kd + pow(cosTh, m) * Ks) * vec3(1.0, 1.0, 1.0), 1.0);
    }
    else
    {
