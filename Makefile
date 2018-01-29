@@ -2,16 +2,20 @@ INCLUDE=`pkg-config --cflags glfw3`
 CXXFLAGS=-std=c++1z -arch x86_64 $(INCLUDE)
 LIBS=-framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -lglew `pkg-config --static --libs glfw3`
 
-all:
-	$(CXX) $(CXXFLAGS) main.cpp -o sdf $(LIBS)
+all: sdf
 
 opt: CXXFLAGS += -O3
-opt:
-	$(CXX) $(CXXFLAGS) main.cpp -o sdf $(LIBS)
 
 debug: CXXFLAGS += -DDEBUG -g -fsanitize=address
-debug:
-	$(CXX) $(CXXFLAGS) main.cpp -o sdf $(LIBS)
 
 clean:
-	rm sdf
+	rm sdf *.o
+
+sdf: main.o single_quad_app.o
+	$(CXX) $(CXXFLAGS) main.o single_quad_app.o -o sdf $(LIBS)
+
+main.o: single_quad_app.h
+	$(CXX) $(CXXFLAGS) -c main.cpp
+
+single_quad_app.o: single_quad_app.h
+	$(CXX) $(CXXFLAGS) -c single_quad_app.cpp
