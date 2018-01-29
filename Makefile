@@ -14,8 +14,8 @@ clean:
 sdf: main.o single_quad_app.o
 	$(CXX) $(CXXFLAGS) main.o single_quad_app.o -o sdf $(LIBS)
 
-main.o: single_quad_app.h
+main.o: main.cpp single_quad_app.h
 	$(CXX) $(CXXFLAGS) -c main.cpp
 
-single_quad_app.o: single_quad_app.h
+single_quad_app.o: single_quad_app.cpp single_quad_app.h
 	$(CXX) $(CXXFLAGS) -c single_quad_app.cpp
