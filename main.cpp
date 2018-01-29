@@ -7,11 +7,7 @@
 int main()
 {
    single_quad_app app;
-   if (!app.init())
-   {
-      // Failed
-      return 1;
-   }
+   app.init();
    app.run();
    app.destroy();
    return 0;
