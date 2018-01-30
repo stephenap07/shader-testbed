@@ -43,7 +43,7 @@ float boxHit(vec3 p, vec3 b)
 float sceneSDF(vec3 p)
 {
    float dist = min(
-      sphereHit(p, vec3(0.0, sin(iTime), -0.30), 0.45),
+      sphereHit(p, vec3(0.0, 0.3 * sin(iTime / 2.0), 0.0), 0.10),
       boxHit(p, vec3(0.1, 0.2, 0.1))
    );
 
@@ -90,9 +90,9 @@ void main()
    float mx = 2.0 * ((iMouse.x / iResolution.x) - half_width);
    float my = 2.0 * ((iMouse.y / iResolution.y) - half_height);
 
-   vec3 look = vec3(3.0*mx, 3.0*my, -1.0);
+   vec3 look = vec3(0.0, 0.0, 0.0);
    vec3 vup = vec3(0, 1, 0);
-   cam.origin = vec3(-0.2, 0.30, 0.55);
+   cam.origin = vec3(-0.25*sin(iTime), 0.40, 0.25 * cos(iTime));
 
    // set up the orthonormal basis
    vec3 w = normalize(cam.origin - look);

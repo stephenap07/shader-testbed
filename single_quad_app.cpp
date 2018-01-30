@@ -21,6 +21,45 @@ static const GLfloat vertices[] = {
 };
 // clang-format on
 
+struct GL_state
+{
+   GLuint vao;
+   GLuint vbo;
+   GLint pos_attrib;
+   GLuint program;
+   GLuint vert_shader;
+   GLuint frag_shader;
+
+   GLint elapsed_time_uniform;
+   GLint resolution_uniform;
+   GLint mouse_uniform;
+} gl_state;
+
+void reloadShaders()
+{
+   auto vert_shader = compile_shader_from_file(GL_VERTEX_SHADER, "vertex.glsl");
+   auto frag_shader = compile_shader_from_file(GL_FRAGMENT_SHADER, "raymarch.glsl");
+   if (!vert_shader || !frag_shader)
+   {
+      fprintf(stderr, "Failed to load shaders\n");
+   }
+   else
+   {
+      gl_state.vert_shader = vert_shader;
+      gl_state.frag_shader = frag_shader;
+      if (gl_state.program)
+      {
+         glDeleteProgram(gl_state.program);
+      }
+      gl_state.program = glCreateProgram();
+      glAttachShader(gl_state.program, gl_state.vert_shader);
+      glAttachShader(gl_state.program, gl_state.frag_shader);
+      glDeleteShader(gl_state.vert_shader);
+      glDeleteShader(gl_state.frag_shader);
+      glLinkProgram(gl_state.program);
+   }
+}
+
 static void error_callback(int error, const char* description)
 {
    fprintf(stderr, "Error: %s\n", description);
@@ -30,6 +69,8 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 {
    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
       glfwSetWindowShouldClose(window, GLFW_TRUE);
+   if (key == GLFW_KEY_R && action == GLFW_PRESS)
+      reloadShaders();
 }
 
 single_quad_app::single_quad_app()
@@ -67,35 +108,22 @@ bool single_quad_app::init()
    glewInit();
    glfwSwapInterval(1);
 
-   glGenVertexArrays(1, &vao);
-   glBindVertexArray(vao);
+   glGenVertexArrays(1, &gl_state.vao);
+   glBindVertexArray(gl_state.vao);
 
-   glGenBuffers(1, &vbo);
-   glBindBuffer(GL_ARRAY_BUFFER, vbo);
+   glGenBuffers(1, &gl_state.vbo);
+   glBindBuffer(GL_ARRAY_BUFFER, gl_state.vbo);
    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-   program = glCreateProgram();
-   vert_shader = compile_shader_from_file(GL_VERTEX_SHADER, "vertex.glsl");
-   frag_shader = compile_shader_from_file(GL_FRAGMENT_SHADER, "raymarch.glsl");
-   if (!vert_shader || !frag_shader)
-   {
-      fprintf(stderr, "Failed to load shaders\n");
-      return false;
-   }
-   glAttachShader(program, vert_shader);
-   glAttachShader(program, frag_shader);
-   glLinkProgram(program);
-   glDeleteShader(vert_shader);
-   glDeleteShader(frag_shader);
+   reloadShaders();
+   glUseProgram(gl_state.program);
+   gl_state.pos_attrib = glGetAttribLocation(gl_state.program, "position");
+   glVertexAttribPointer(gl_state.pos_attrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (void*)0);
+   glEnableVertexAttribArray(gl_state.pos_attrib);
 
-   glUseProgram(program);
-   pos_attrib = glGetAttribLocation(program, "position");
-   glVertexAttribPointer(pos_attrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (void*)0);
-   glEnableVertexAttribArray(pos_attrib);
-
-   elapsed_time_uniform = glGetUniformLocation(program, "iTime");
-   resolution_uniform = glGetUniformLocation(program, "iResolution");
-   mouse_uniform = glGetUniformLocation(program, "iMouse");
+   gl_state.elapsed_time_uniform = glGetUniformLocation(gl_state.program, "iTime");
+   gl_state.resolution_uniform = glGetUniformLocation(gl_state.program, "iResolution");
+   gl_state.mouse_uniform = glGetUniformLocation(gl_state.program, "iMouse");
 
    return true;
 }
@@ -109,23 +137,23 @@ void single_quad_app::run()
    {
       system_ticker.tick();
 
-      glUniform1f(elapsed_time_uniform, GLfloat(glfwGetTime()));
+      glUniform1f(gl_state.elapsed_time_uniform, GLfloat(glfwGetTime()));
 
       int width, height;
       glfwGetFramebufferSize(window, &width, &height);
       res[0] = GLfloat(width);
       res[1] = GLfloat(height);
-      glUniform2fv(resolution_uniform, 1, res);
+      glUniform2fv(gl_state.resolution_uniform, 1, res);
       double mx, my;
       glfwGetCursorPos(window, &mx, &my);
       float mouse_pos[2] = { float(mx), float(my) };
-      glUniform2fv(mouse_uniform, 1, mouse_pos);
+      glUniform2fv(gl_state.mouse_uniform, 1, mouse_pos);
 
       glViewport(0, 0, width, height);
       glClear(GL_COLOR_BUFFER_BIT);
 
-      glUseProgram(program);
-      glBindVertexArray(vao);
+      glUseProgram(gl_state.program);
+      glBindVertexArray(gl_state.vao);
       glDrawArrays(GL_TRIANGLES, 0, 6);
 
       glfwSwapBuffers(window);
@@ -141,11 +169,9 @@ void single_quad_app::run()
 
 void single_quad_app::destroy()
 {
-   glDeleteProgram(program);
-   glDeleteShader(vert_shader);
-   glDeleteShader(frag_shader);
-   glDeleteBuffers(1, &vbo);
-   glDeleteVertexArrays(1, &vao);
+   glDeleteProgram(gl_state.program);
+   glDeleteBuffers(1, &gl_state.vbo);
+   glDeleteVertexArrays(1, &gl_state.vao);
    glfwDestroyWindow(window);
    glfwTerminate();
 }

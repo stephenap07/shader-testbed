@@ -15,19 +15,9 @@ public:
    void run();
    void destroy();
 
-   GLfloat screen_w = 1280.f;
-   GLfloat screen_h = 720.f;
+   float screen_w = 1280.f;
+   float screen_h = 720.f;
 
    GLFWwindow* window;
-   GLuint vao;
-   GLuint vbo;
-   GLint pos_attrib;
-   GLuint program;
-   GLuint vert_shader;
-   GLuint frag_shader;
-
-   GLint elapsed_time_uniform;
-   GLint resolution_uniform;
-   GLint mouse_uniform;
    ticker system_ticker;
 };
