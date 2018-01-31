@@ -40,13 +40,17 @@ float boxHit(vec3 p, vec3 b)
    return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
 }
 
+float udRoundedBox(vec3 p, vec3 b, float r)
+{
+   return length(max(abs(p)-b, 0.)) -r;
+}
+
 float sceneSDF(vec3 p)
 {
    float dist = min(
-      sphereHit(p, vec3(0.0, 0.3 * sin(iTime / 2.0), 0.0), 0.10),
-      boxHit(p, vec3(0.1, 0.2, 0.1))
+      boxHit(p*2.0, vec3(0.1, 0.2, 0.1)) /2.0,
+      sphereHit(p*2.0, vec3(0.0, 0.3 * sin(iTime / 2.0), 0.0), 0.10) /2.0
    );
-
    return dist;
 }
 
@@ -92,7 +96,7 @@ void main()
 
    vec3 look = vec3(0.0, 0.0, 0.0);
    vec3 vup = vec3(0, 1, 0);
-   cam.origin = vec3(-0.25*sin(iTime), 0.40, 0.25 * cos(iTime));
+   cam.origin = vec3(-0.30*sin(iTime), 0.20, 0.30 * cos(iTime));
 
    // set up the orthonormal basis
    vec3 w = normalize(cam.origin - look);
@@ -111,14 +115,14 @@ void main()
 
    if (dist > -1.0)
    {
-      vec3 Kd = vec3(0.1, 0.3, 0.8);
+      vec3 p = r.origin + r.direction * dist;
+      vec3 n = estimateNormal(p);
+      vec3 Kd = n;
       vec3 Ks = vec3(1.0, 1.0, 1.0);
       float m = 10.0;
       vec3 lightPos = vec3(sin(iTime * 2.0), 0.3, -cos(iTime * 2.0));
       vec3 l = normalize(lightPos - look); // assuming look represents object for now
-      vec3 p = r.origin + r.direction * dist;
       vec3 v = normalize(r.origin - p);
-      vec3 n = estimateNormal(p);
       vec3 h = normalize(v + lightPos);
       float cosTh = clamp(dot(n, h), 0.0, 1.0);
       float cosTi = clamp(dot(l, n), 0.0, 1.0);
@@ -127,7 +131,7 @@ void main()
    else
    {
       float y = 0.5 * (r.direction.y + 1.0);
-      vec3 gradient = (1.0 - y) * vec3(1.0, 1.0, 1.0) + y * vec3(0.3, 0.3, 0.8);
+      vec3 gradient = (1.0 - y) * vec3(0.8, 0.8, 0.8) + y * vec3(0.05, 0.05, 0.05);
       outColor = vec4(gradient, 1.0);
    }
 }
