@@ -37,8 +37,8 @@ struct GL_state
 
 void reloadShaders()
 {
-   auto vert_shader = compile_shader_from_file(GL_VERTEX_SHADER, "vertex.glsl");
-   auto frag_shader = compile_shader_from_file(GL_FRAGMENT_SHADER, "raymarch.glsl");
+   auto vert_shader = compile_shader_from_file(GL_VERTEX_SHADER, "shaders/vertex.glsl");
+   auto frag_shader = compile_shader_from_file(GL_FRAGMENT_SHADER, "shaders/raymarch.glsl");
    if (!vert_shader || !frag_shader)
    {
       fprintf(stderr, "Failed to load shaders\n");
