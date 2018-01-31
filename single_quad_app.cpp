@@ -6,6 +6,9 @@
 #include <chrono>
 #include <thread>
 
+#include "extern/imgui/imgui.h"
+#include "extern/imgui_impl/imgui_impl_glfw_gl3.h"
+
 #include "clock.h"
 #include "opengl_util.h"
 
@@ -93,7 +96,7 @@ bool single_quad_app::init()
    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-   window = glfwCreateWindow(int(screen_w), int(screen_h), "SDF", nullptr, nullptr);
+   window = glfwCreateWindow(screen_w, screen_h, "SDF", nullptr, nullptr);
 
    if (!window)
    {
@@ -107,6 +110,10 @@ bool single_quad_app::init()
    glewExperimental = GL_TRUE;
    glewInit();
    glfwSwapInterval(1);
+
+   // Setup ImGui binding
+   ImGui_ImplGlfwGL3_Init(window, true);
+   ImGui::StyleColorsClassic();
 
    glGenVertexArrays(1, &gl_state.vao);
    glBindVertexArray(gl_state.vao);
@@ -133,28 +140,20 @@ void single_quad_app::run()
    GLfloat res[2];
    res[0] = screen_w;
    res[1] = screen_h;
+   bool show_demo_window = true;
    while (!glfwWindowShouldClose(window))
    {
       system_ticker.tick();
+      glfwGetCursorPos(window, &mouse_x, &mouse_y);
+      glfwGetFramebufferSize(window, &screen_w, &screen_h);
 
-      glUniform1f(gl_state.elapsed_time_uniform, GLfloat(glfwGetTime()));
-
-      int width, height;
-      glfwGetFramebufferSize(window, &width, &height);
-      res[0] = GLfloat(width);
-      res[1] = GLfloat(height);
-      glUniform2fv(gl_state.resolution_uniform, 1, res);
-      double mx, my;
-      glfwGetCursorPos(window, &mx, &my);
-      float mouse_pos[2] = { float(mx), float(my) };
-      glUniform2fv(gl_state.mouse_uniform, 1, mouse_pos);
-
-      glViewport(0, 0, width, height);
+      ImGui_ImplGlfwGL3_NewFrame();
+      glViewport(0, 0, screen_w, screen_h);
       glClear(GL_COLOR_BUFFER_BIT);
+      drawQuad();
 
-      glUseProgram(gl_state.program);
-      glBindVertexArray(gl_state.vao);
-      glDrawArrays(GL_TRIANGLES, 0, 6);
+      ImGui::ShowDemoWindow(&show_demo_window);
+      ImGui::Render();
 
       glfwSwapBuffers(window);
       glfwPollEvents();
@@ -174,4 +173,18 @@ void single_quad_app::destroy()
    glDeleteVertexArrays(1, &gl_state.vao);
    glfwDestroyWindow(window);
    glfwTerminate();
+}
+
+void single_quad_app::drawQuad()
+{
+   glUniform1f(gl_state.elapsed_time_uniform, GLfloat(glfwGetTime()));
+   GLfloat res[2];
+   res[0] = GLfloat(screen_w);
+   res[1] = GLfloat(screen_h);
+   glUniform2fv(gl_state.resolution_uniform, 1, res);
+   float mouse_pos[2] = { float(mouse_x), float(mouse_y) };
+   glUniform2fv(gl_state.mouse_uniform, 1, mouse_pos);
+   glUseProgram(gl_state.program);
+   glBindVertexArray(gl_state.vao);
+   glDrawArrays(GL_TRIANGLES, 0, 6);
 }

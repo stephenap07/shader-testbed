@@ -15,8 +15,13 @@ public:
    void run();
    void destroy();
 
-   float screen_w = 1280.f;
-   float screen_h = 720.f;
+   void drawQuad();
+
+   int screen_w = 1280.f;
+   int screen_h = 720.f;
+
+   double mouse_x = 0;
+   double mouse_y = 0;
 
    GLFWwindow* window;
    ticker system_ticker;
