@@ -36,6 +36,7 @@ struct GL_state
    GLint elapsed_time_uniform;
    GLint resolution_uniform;
    GLint mouse_uniform;
+   GLint color_uniform;
 } gl_state;
 
 void reloadShaders()
@@ -73,7 +74,10 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
       glfwSetWindowShouldClose(window, GLFW_TRUE);
    if (key == GLFW_KEY_R && action == GLFW_PRESS)
+   {
       reloadShaders();
+   }
+   ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods);
 }
 
 single_quad_app::single_quad_app()
@@ -112,8 +116,12 @@ bool single_quad_app::init()
    glfwSwapInterval(1);
 
    // Setup ImGui binding
-   ImGui_ImplGlfwGL3_Init(window, true);
-   ImGui::StyleColorsClassic();
+   ImGui_ImplGlfwGL3_Init(window, false);
+   // Setup imgui callbacks for keyboard/mouse input
+   glfwSetMouseButtonCallback(window, ImGui_ImplGlfwGL3_MouseButtonCallback);
+   glfwSetScrollCallback(window, ImGui_ImplGlfwGL3_ScrollCallback);
+   glfwSetCharCallback(window, ImGui_ImplGlfwGL3_CharCallback);
+   ImGui::StyleColorsLight();
 
    glGenVertexArrays(1, &gl_state.vao);
    glBindVertexArray(gl_state.vao);
@@ -131,16 +139,16 @@ bool single_quad_app::init()
    gl_state.elapsed_time_uniform = glGetUniformLocation(gl_state.program, "iTime");
    gl_state.resolution_uniform = glGetUniformLocation(gl_state.program, "iResolution");
    gl_state.mouse_uniform = glGetUniformLocation(gl_state.program, "iMouse");
+   gl_state.color_uniform = glGetUniformLocation(gl_state.program, "iColor");
 
    return true;
 }
 
 void single_quad_app::run()
 {
-   GLfloat res[2];
-   res[0] = screen_w;
-   res[1] = screen_h;
-   bool show_demo_window = true;
+   GLfloat res[2] = { GLfloat(screen_w), GLfloat(screen_h) };
+   bool show_sdf_properties_window = true;
+   ImVec4 object_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
    while (!glfwWindowShouldClose(window))
    {
       system_ticker.tick();
@@ -149,10 +157,22 @@ void single_quad_app::run()
 
       ImGui_ImplGlfwGL3_NewFrame();
       glViewport(0, 0, screen_w, screen_h);
-      glClear(GL_COLOR_BUFFER_BIT);
-      drawQuad();
 
-      ImGui::ShowDemoWindow(&show_demo_window);
+      glClear(GL_COLOR_BUFFER_BIT);
+      draw_quad();
+
+      {
+         ImGui::Begin("SDF Properties", &show_sdf_properties_window);
+         static float f = 0.0f;
+         ImGui::Text("Change the color of objects"); // Some text (you can use a format string too)
+         if (ImGui::ColorEdit3("Object color", (float*)&object_color))
+         {
+            glUniform4fv(gl_state.color_uniform, 1, (float*)&object_color);
+         }
+         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+         ImGui::End();
+      }
+
       ImGui::Render();
 
       glfwSwapBuffers(window);
@@ -171,16 +191,15 @@ void single_quad_app::destroy()
    glDeleteProgram(gl_state.program);
    glDeleteBuffers(1, &gl_state.vbo);
    glDeleteVertexArrays(1, &gl_state.vao);
+   ImGui_ImplGlfwGL3_Shutdown();
    glfwDestroyWindow(window);
    glfwTerminate();
 }
 
-void single_quad_app::drawQuad()
+void single_quad_app::draw_quad()
 {
    glUniform1f(gl_state.elapsed_time_uniform, GLfloat(glfwGetTime()));
-   GLfloat res[2];
-   res[0] = GLfloat(screen_w);
-   res[1] = GLfloat(screen_h);
+   GLfloat res[2] = { GLfloat(screen_w), GLfloat(screen_h) };
    glUniform2fv(gl_state.resolution_uniform, 1, res);
    float mouse_pos[2] = { float(mouse_x), float(mouse_y) };
    glUniform2fv(gl_state.mouse_uniform, 1, mouse_pos);

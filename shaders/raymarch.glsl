@@ -5,6 +5,7 @@ out vec4 outColor;
 uniform float iTime;
 uniform vec2 iResolution;
 uniform vec2 iMouse;
+uniform vec4 iColor;
 
 #define STEPS 255
 #define EPSILON 0.0001
@@ -48,8 +49,8 @@ float udRoundedBox(vec3 p, vec3 b, float r)
 float sceneSDF(vec3 p)
 {
    float dist = min(
-      boxHit(p*2.0, vec3(0.1, 0.2, 0.1)) /2.0,
-      sphereHit(p*2.0, vec3(0.0, 0.3 * sin(iTime / 2.0), 0.0), 0.10) /2.0
+      boxHit(p*2.0, vec3(0.1, 0.2, 0.1)) / 2.0,
+      sphereHit(p*2.0, vec3(0.0, 0.3 * sin(iTime / 2.0), 0.0), 0.10) / 2.0
    );
    return dist;
 }
@@ -117,7 +118,7 @@ void main()
    {
       vec3 p = r.origin + r.direction * dist;
       vec3 n = estimateNormal(p);
-      vec3 Kd = n;
+      vec4 Kd = iColor;
       vec3 Ks = vec3(1.0, 1.0, 1.0);
       float m = 10.0;
       vec3 lightPos = vec3(sin(iTime * 2.0), 0.3, -cos(iTime * 2.0));
@@ -126,7 +127,7 @@ void main()
       vec3 h = normalize(v + lightPos);
       float cosTh = clamp(dot(n, h), 0.0, 1.0);
       float cosTi = clamp(dot(l, n), 0.0, 1.0);
-      outColor =  vec4(cosTi * (Kd + pow(cosTh, m) * Ks) * vec3(1.0, 1.0, 1.0), 1.0);
+      outColor = vec4(max(cosTi, 0.5) * (Kd.xyz + pow(cosTh, m) * Ks) * vec3(1.0, 1.0, 1.0), 1.0);
    }
    else
    {
