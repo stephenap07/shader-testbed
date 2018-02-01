@@ -1,4 +1,5 @@
 sdf
 *.o
 *.sw[A-z]
+*.ini
 /shader-testbed
