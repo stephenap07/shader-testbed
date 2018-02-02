@@ -37,6 +37,7 @@ struct GL_state
    GLint resolution_uniform;
    GLint mouse_uniform;
    GLint color_uniform;
+   GLint shininess_uniform;
 } gl_state;
 
 void reloadShaders()
@@ -61,6 +62,12 @@ void reloadShaders()
       glDeleteShader(gl_state.vert_shader);
       glDeleteShader(gl_state.frag_shader);
       glLinkProgram(gl_state.program);
+
+      gl_state.elapsed_time_uniform = glGetUniformLocation(gl_state.program, "iTime");
+      gl_state.resolution_uniform = glGetUniformLocation(gl_state.program, "iResolution");
+      gl_state.mouse_uniform = glGetUniformLocation(gl_state.program, "iMouse");
+      gl_state.color_uniform = glGetUniformLocation(gl_state.program, "iColor");
+      gl_state.shininess_uniform = glGetUniformLocation(gl_state.program, "iShininess");
    }
 }
 
@@ -136,11 +143,6 @@ bool single_quad_app::init()
    glVertexAttribPointer(gl_state.pos_attrib, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (void*)0);
    glEnableVertexAttribArray(gl_state.pos_attrib);
 
-   gl_state.elapsed_time_uniform = glGetUniformLocation(gl_state.program, "iTime");
-   gl_state.resolution_uniform = glGetUniformLocation(gl_state.program, "iResolution");
-   gl_state.mouse_uniform = glGetUniformLocation(gl_state.program, "iMouse");
-   gl_state.color_uniform = glGetUniformLocation(gl_state.program, "iColor");
-
    return true;
 }
 
@@ -163,7 +165,11 @@ void single_quad_app::run()
 
       {
          ImGui::Begin("SDF Properties", &show_sdf_properties_window);
-         static float f = 0.0f;
+         static float shininess = 0.0f;
+         if (ImGui::SliderFloat("float", &shininess, 1.0f, 80.0f))
+         {
+            glUniform1f(gl_state.shininess_uniform, shininess);
+         }
          ImGui::Text("Change the color of objects"); // Some text (you can use a format string too)
          if (ImGui::ColorEdit3("Object color", (float*)&object_color))
          {
