@@ -9,15 +9,15 @@ uniform vec4 iColor;
 uniform float iShininess = 10.0;
 
 #define STEPS 255
-#define EPSILON 0.0001
+#define EPSILON 0.001
 #define MAX_DIST 100.0
 
 struct camera
 {
    vec3 origin;
-	vec3 left_corner;
-	vec3 horizontal;
-	vec3 vertical;
+   vec3 left_corner;
+   vec3 horizontal;
+   vec3 vertical;
 };
 
 struct ray
@@ -61,8 +61,8 @@ vec3 repeat(vec3 p, int repeat)
 float sceneSDF(vec3 p)
 {
    float dist = min(
-      sdfRoundedBox(p * 2.0, vec3(0.2, 0.6, 0.6), 0.05) / 2.0,
-      sdfSphere(p, vec3(-0.35, 0.0, -0.3), 0.2) / 2.0
+      sdfRoundedBox(p, vec3(0.2, 0.4, 0.2), 0.04),
+      sdfSphere(p, vec3(-0.35, 0.1, -0.3), 0.2) / 2.0
    );
    dist = min(dist, sdfPlane(p, vec4(0.0, 1.0, 0.0, 0.2)));
    return dist;
@@ -71,34 +71,29 @@ float sceneSDF(vec3 p)
 float shadow(in vec3 ro, in vec3 rd, float mint, float maxt, float k)
 {
    float res = 1.0;
-   for( float t=mint; t < maxt; )
+   for (float t = mint; t < maxt;)
    {
-      float h = sceneSDF(ro + rd*t);
-      if( h < EPSILON )
-         return 0.0;
-      res = min(res, k * h / t);
-      t += h;
+      float dist = sceneSDF(ro + rd * t);
+      res = min(res, k * dist / t);
+      if (dist < EPSILON)
+         break;
+      t += dist;
    }
-   return res;
+   return clamp(res, 0.0, 1.0);
 }
 
-float raymarchHit(vec3 position, vec3 direction)
+float raymarch(vec3 position, vec3 direction)
 {
-	float depth = 0;
+   float depth = 0;
    for (int i = 0; i < STEPS; ++i)
    {
       float dist = sceneSDF(position + direction * depth);
       if (dist < EPSILON)
-      {
-			return depth;
-      }
+         return depth;
       depth += dist;
       if (depth >= MAX_DIST)
-      {
          return -1.0;
-      }
    }
-
    return -1.0;
 }
 
@@ -111,20 +106,38 @@ vec3 estimateNormal(vec3 p) {
     ));
 }
 
-void main()
+vec4 computeLight(ray r, float dist)
+{
+   vec3 lightPos = vec3(-0.3, 1.0, -0.6);
+   vec4 lightColor = vec4(1.0, 1.0, 1.0, 1.0);
+
+   vec3 p = r.origin + r.direction * dist;
+
+   vec4 Kd = iColor;
+   vec4 Ks = vec4(1.0, 1.0, 1.0, 1.0);
+
+   vec3 n = estimateNormal(p);
+   vec3 l = normalize(lightPos - p);
+   vec3 v = normalize(r.origin - p);
+   vec3 h = normalize(v + lightPos);
+
+   float cosTh = clamp(dot(h, n), 0.0, 1.0);
+   float cosTi = clamp(dot(l, n), 0.0, 1.0) * shadow(p, l, 10.0 * EPSILON, distance(p, lightPos), 4.0);
+
+   return (Kd + Ks * pow(cosTh, iShininess)) * lightColor * cosTi;
+}
+
+camera getCam(vec3 origin, vec3 look, vec3 vup, float fov)
 {
    camera cam;
-   float fov = radians(60.0); // vertical field of view
+   cam.origin = origin;
 
-   float half_height = tan(fov/2.0);
-   float half_width = (16.0/9.0)*half_height;
+   fov = radians(fov); // vertical field of view
+   float half_height = tan(fov / 2.0);
+   float half_width = (iResolution.x / iResolution.y) * half_height;
 
    float mx = 2.0 * ((iMouse.x / iResolution.x) - half_width);
    float my = 2.0 * ((iMouse.y / iResolution.y) - half_height);
-
-   vec3 look = vec3(0.0, 0.0, 0.0);
-   vec3 vup = vec3(0, 1, 0);
-   cam.origin = vec3(-0.35, 0.30, 0.50);
 
    // set up the orthonormal basis
    vec3 w = normalize(cam.origin - look);
@@ -137,31 +150,21 @@ void main()
    cam.horizontal = 2.0*half_width*u;
    cam.vertical = 2.0*half_height*v;
 
+   return cam;
+}
+
+void main()
+{
+   vec3 origin = vec3(-0.40, 0.55, 0.35);
+   vec3 look = vec3(0.0, 0.0, 0.0);
+   vec3 vup = vec3(0, 1, 0);
+   camera cam = getCam(origin, look, vup, 60.0);
    ray r = get_ray(cam, gl_FragCoord.xy / iResolution);
-   float dist = raymarchHit(r.origin, r.direction);
+   float dist = raymarch(r.origin, r.direction);
 
    if (dist > -1.0)
    {
-      vec3 lightPos = vec3(-0.1 * sin(iTime), 1.0, 0.6 * cos(iTime));
-      vec3 p = r.origin + r.direction * dist;
-      vec3 pshadow = r.origin + r.direction * (dist - EPSILON);
-      float shadowDist = shadow(lightPos, normalize(pshadow - lightPos), EPSILON, distance(lightPos, pshadow), 8.5);
-
-      vec3 n = estimateNormal(p);
-      vec4 Kd = iColor;
-      vec3 Ks = vec3(1.0, 1.0, 1.0);
-      vec3 l = normalize(lightPos - look); // assuming look represents object for now
-      vec3 v = normalize(r.origin - p);
-      vec3 h = normalize(v + lightPos);
-      float cosTh = clamp(dot(n, h), 0.0, 1.0);
-      float cosTi = clamp(dot(l, n), 0.0, 1.0);
-
-      if (shadowDist <= EPSILON / 2.0)
-      {
-         cosTi = (1.0-shadowDist) * shadowDist;
-      }
-
-      outColor = vec4(cosTi * (Kd.xyz + pow(cosTh, iShininess) * Ks) * vec3(1.0, 1.0, 1.0), 1.0);
+      outColor = computeLight(r, dist);
    }
    else
    {

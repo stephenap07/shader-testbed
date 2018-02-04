@@ -53,16 +53,13 @@ void reloadShaders()
       gl_state.vert_shader = vert_shader;
       gl_state.frag_shader = frag_shader;
       if (gl_state.program)
-      {
          glDeleteProgram(gl_state.program);
-      }
       gl_state.program = glCreateProgram();
       glAttachShader(gl_state.program, gl_state.vert_shader);
       glAttachShader(gl_state.program, gl_state.frag_shader);
       glDeleteShader(gl_state.vert_shader);
       glDeleteShader(gl_state.frag_shader);
       glLinkProgram(gl_state.program);
-
       gl_state.elapsed_time_uniform = glGetUniformLocation(gl_state.program, "iTime");
       gl_state.resolution_uniform = glGetUniformLocation(gl_state.program, "iResolution");
       gl_state.mouse_uniform = glGetUniformLocation(gl_state.program, "iMouse");
@@ -81,9 +78,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
       glfwSetWindowShouldClose(window, GLFW_TRUE);
    if (key == GLFW_KEY_R && action == GLFW_PRESS)
-   {
       reloadShaders();
-   }
    ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods);
 }
 
@@ -100,7 +95,10 @@ bool single_quad_app::init()
    glfwSetErrorCallback(error_callback);
 
    if (!glfwInit())
-      exit(EXIT_FAILURE);
+   {
+      fprintf(stderr, "Failed to initialize GLFW3\n");
+      return false;
+   }
 
    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
@@ -111,7 +109,7 @@ bool single_quad_app::init()
 
    if (!window)
    {
-      fprintf(stderr, "Failed to initialize GLFW3\n");
+      fprintf(stderr, "Failed to initialize GLFW3 window\n");
       return false;
    }
 
@@ -167,14 +165,10 @@ void single_quad_app::run()
          ImGui::Begin("SDF Properties", &show_sdf_properties_window);
          static float shininess = 0.0f;
          if (ImGui::SliderFloat("float", &shininess, 1.0f, 80.0f))
-         {
             glUniform1f(gl_state.shininess_uniform, shininess);
-         }
          ImGui::Text("Change the color of objects"); // Some text (you can use a format string too)
          if (ImGui::ColorEdit3("Object color", (float*)&object_color))
-         {
             glUniform4fv(gl_state.color_uniform, 1, (float*)&object_color);
-         }
          ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
          ImGui::End();
       }
